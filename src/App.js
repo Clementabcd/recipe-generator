@@ -59,7 +59,18 @@ Propose-moi 3 recettes ${searchTypeText[searchType]}. Pour chaque recette, répo
 
 IMPORTANT : Ta réponse doit être UNIQUEMENT ce JSON, sans aucun texte avant ou après. Ne commence pas par \`\`\`json et ne termine pas par \`\`\`.`;
 
-      const response = await window.claude.complete(prompt);
+      // Au lieu de window.claude.complete
+      const response = await fetch('/api/claude', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
       
       try {
         const parsedResponse = JSON.parse(response);
