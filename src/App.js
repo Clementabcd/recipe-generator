@@ -59,21 +59,39 @@ Propose-moi 3 recettes ${searchTypeText[searchType]}. Pour chaque recette, répo
 
 IMPORTANT : Ta réponse doit être UNIQUEMENT ce JSON, sans aucun texte avant ou après. Ne commence pas par \`\`\`json et ne termine pas par \`\`\`.`;
 
-      // Au lieu de window.claude.complete
+      // Appel à votre API route au lieu de window.claude.complete()
       const response = await fetch('/api/claude', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }]
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ]
         })
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const claudeResponse = data.content[0].text;
       
       try {
-        const parsedResponse = JSON.parse(response);
+        // Nettoyer la réponse au cas où il y aurait des backticks
+        let cleanResponse = claudeResponse.trim();
+        if (cleanResponse.startsWith('```json')) {
+          cleanResponse = cleanResponse.replace(/```json\s*/, '').replace(/```\s*$/, '');
+        }
+        
+        const parsedResponse = JSON.parse(cleanResponse);
         if (parsedResponse.recipes && Array.isArray(parsedResponse.recipes)) {
           setRecipes(parsedResponse.recipes);
         } else {
@@ -81,7 +99,7 @@ IMPORTANT : Ta réponse doit être UNIQUEMENT ce JSON, sans aucun texte avant ou
         }
       } catch (parseError) {
         console.error('Erreur de parsing:', parseError);
-        console.log('Réponse brute:', response);
+        console.log('Réponse brute:', claudeResponse);
         setRecipes([{
           name: "Erreur de traitement",
           description: "Impossible de traiter la réponse de l'IA. Veuillez réessayer.",
@@ -97,7 +115,7 @@ IMPORTANT : Ta réponse doit être UNIQUEMENT ce JSON, sans aucun texte avant ou
       console.error('Erreur lors de la recherche:', error);
       setRecipes([{
         name: "Erreur de connexion",
-        description: "Impossible de se connecter au service de recettes. Veuillez réessayer.",
+        description: `Impossible de se connecter au service de recettes: ${error.message}`,
         ingredients: [],
         instructions: [],
         cookingTime: "N/A",
